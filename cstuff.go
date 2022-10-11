@@ -11,6 +11,7 @@ typedef void (*voidCallbackFunction) ();
 extern void go_lvar(int id,  char * name);
 extern void go_test_func();
 extern void go_lvar_values(char * name, double value);
+extern void go_lvar_ids(int id, double value);
 extern void go_lvar_list(int id, char * name);
 void lvarList(int id, const char * name) {
 	go_lvar_list(id, (char*)name);
@@ -21,14 +22,15 @@ void logger(const char * logString) {
 }
 void nameCallback(const char * lvarName[], double newValue[]) {
 	for (int i = 0; lvarName[i] != NULL ; i++) {
-		printf("Name callback %s = %f\n", lvarName[i], newValue[i]);
+		//printf("Name callback %s = %f\n", lvarName[i], newValue[i]);
 		go_lvar_values((char *)lvarName[i], newValue[i]);
 	}
 }
 void idCallback(int id[], double newValue[]) {
 
 	for (int i = 0; id[i] > 0 ; i++) {
-		printf("ID callback %d = %f\n", id[i], newValue[i]);
+		//printf("ID callback %d = %f\n", id[i], newValue[i]);
+		go_lvar_ids(id[i], newValue[i]);
 	}
 }
 void lvarCallback(const char * name, double value) {
@@ -76,35 +78,41 @@ func (u *FSUIPC) RegisterCallbacks() {
 func (u *FSUIPC) RegisterUpdateCallback() {
 	f := C.voidCallbackFunction(C.updateCallback)
 	args := []uintptr{uintptr(unsafe.Pointer(f))}
-	r1, r2, err := u.proc_registerUpdateCallback.Call(args...)
-	log.Println("Execute RegisterUpdateCallback", r1, r2, err)
+	// r1, r2, err :=
+	u.proc_registerUpdateCallback.Call(args...)
+	// log.Println("Execute RegisterUpdateCallback", r1, r2, err)
 }
 func (u *FSUIPC) RegisterLvarUpdateCallbackById() {
 	f := C.idCallbackFunction(C.idCallback)
 	args := []uintptr{uintptr(unsafe.Pointer(f))}
-	r1, r2, err := u.proc_registerLvarUpdateCallbackById.Call(args...)
-	log.Println("Execute RegisterLvarUpdateCallbackById", r1, r2, err)
+	// r1, r2, err :=
+	u.proc_registerLvarUpdateCallbackById.Call(args...)
+	// log.Println("Execute RegisterLvarUpdateCallbackById", r1, r2, err)
 }
 func (u *FSUIPC) RegisterLvarUpdateCallbackByName() {
 	f := C.nameCallbackFunction(C.nameCallback)
 	args := []uintptr{uintptr(unsafe.Pointer(f))}
-	r1, r2, err := u.proc_registerLvarUpdateCallbackByName.Call(args...)
-	log.Println("Execute RegisterLvarUpdateCallbackById", r1, r2, err)
+	// r1, r2, err :=
+	u.proc_registerLvarUpdateCallbackByName.Call(args...)
+	// log.Println("Execute RegisterLvarUpdateCallbackById", r1, r2, err)
 }
 func (u *FSUIPC) FlagLvarForUpdateCallbackByName(name string) {
 	args := []uintptr{uintptr(unsafe.Pointer(syscall.StringBytePtr(name)))}
-	r1, r2, err := u.proc_flagLvarForUpdateCallbackByName.Call(args...)
-	log.Println("exec FlagLvarForUpdateCallbackByName", r1, r2, err)
+	// r1, r2, err :=
+	u.proc_flagLvarForUpdateCallbackByName.Call(args...)
+	// log.Println("exec FlagLvarForUpdateCallbackByName", r1, r2, err)
 }
 func (u *FSUIPC) FlagLvarForUpdateCallbackById(id uintptr) {
 	args := []uintptr{id}
-	r1, r2, err := u.proc_flagLvarForUpdateCallbackById.Call(args...)
-	log.Println("exec FlagLvarForUpdateCallbackById", r1, r2, err)
+	// r1, r2, err :=
+	u.proc_flagLvarForUpdateCallbackById.Call(args...)
+	// log.Println("exec FlagLvarForUpdateCallbackById", r1, r2, err)
 }
 
 func (u *FSUIPC) GetLvarValues() {
 	f := C.lvarCallbackFunction(C.lvarCallback)
 	args := []uintptr{uintptr(unsafe.Pointer(f))}
-	r1, r2, err := u.proc_getLvarValues.Call(args...)
-	log.Println("Execute GetLvarValues", r1, r2, err)
+	// r1, r2, err :=
+	u.proc_getLvarValues.Call(args...)
+	// log.Println("Execute GetLvarValues", r1, r2, err)
 }

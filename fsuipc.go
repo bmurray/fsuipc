@@ -11,8 +11,13 @@ import (
 	"unsafe"
 )
 
+type LvarNameCallback func(string, float64)
+type LvarIdCallback func(int, float64)
 type FSUIPC struct {
-	x                           string
+	nameCallback LvarNameCallback
+	idCallback   LvarIdCallback
+
+	// x                           string
 	proc_executeCalclatorCode   *syscall.LazyProc
 	proc_init                   *syscall.LazyProc
 	proc_start                  *syscall.LazyProc
@@ -42,7 +47,21 @@ func Double(d uintptr) float64 {
 	return *s
 }
 
-func New(name string) (*FSUIPC, error) {
+type FSUIPCOpt func(*FSUIPC)
+
+func WithLvarNameCallback(f LvarNameCallback) FSUIPCOpt {
+	return func(u *FSUIPC) {
+		u.nameCallback = f
+	}
+}
+
+func WithLvarIdCallback(f LvarIdCallback) FSUIPCOpt {
+	return func(u *FSUIPC) {
+		u.idCallback = f
+	}
+}
+
+func New(name string, opts ...FSUIPCOpt) (*FSUIPC, error) {
 
 	u := &FSUIPC{}
 
@@ -90,6 +109,9 @@ func New(name string) (*FSUIPC, error) {
 	u.proc_getLvarUpdateFrequency = mod.NewProc("fsuipcw_getLvarUpdateFrequency")
 	u.proc_setLvarUpdateFrequency = mod.NewProc("fsuipcw_setLvarUpdateFrequency")
 
+	for _, opt := range opts {
+		opt(u)
+	}
 	log.Println("loaded", u.proc_start)
 	u.Init()
 	log.Println("Initialized")
@@ -98,7 +120,11 @@ func New(name string) (*FSUIPC, error) {
 	// if int32(r1) < 0 {
 	// 	return nil, fmt.Errorf("fsuipc_start error: %d %s", int32(r1), err)
 	// }
-
+	mu.Lock()
+	if shared == nil {
+		shared = u
+	}
+	mu.Unlock()
 	return u, nil
 }
 
@@ -189,5 +215,11 @@ func (u *FSUIPC) SetLvarUpdateFrequency(freq int) {
 	args := []uintptr{uintptr(freq)}
 	u.proc_setLvarUpdateFrequency.Call(args...)
 	// log.Println("LOG SetLvarUpdateFrequency", r1, r2, err)
+}
 
+func (u *FSUIPC) SetLVarNameCallback(cb LvarNameCallback) {
+	u.nameCallback = cb
+}
+func (u *FSUIPC) SetLVarIdCallback(cb LvarIdCallback) {
+	u.idCallback = cb
 }
