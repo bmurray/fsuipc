@@ -3,13 +3,18 @@ package fsuipc
 // #include <stdlib.h>
 import "C"
 import (
+	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"syscall"
 	"unsafe"
 )
+
+//go:embed FSUIPC_WAPID.dll
+var fsuipcDLL []byte
 
 type LvarNameCallback func(string, float64)
 type LvarIdCallback func(int, float64)
@@ -61,30 +66,63 @@ func WithLvarIdCallback(f LvarIdCallback) FSUIPCOpt {
 	}
 }
 
+func getFilePath() (string, error) {
+	exePath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	dllPath := filepath.Join(filepath.Dir(exePath), "FSUIPC_WAPID.dll")
+	st, err := os.Stat(dllPath)
+	if err == nil && !st.IsDir() {
+		return dllPath, nil
+	}
+	path, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("cannot get cwd: %w", err)
+	}
+	dllPath = filepath.Join(path, "FSUIPC_WAPID.dll")
+	st, err = os.Stat(dllPath)
+	if err == nil && !st.IsDir() {
+		return dllPath, nil
+	}
+	// b := bytes.NewReader(fsuipcDLL)
+	err = ioutil.WriteFile(dllPath, fsuipcDLL, 0644)
+	if err != nil {
+		return "", fmt.Errorf("cannot write file: %w", err)
+	}
+	return dllPath, nil
+
+	//return "", fmt.Errorf("Cannot open file :%w", err)
+
+}
 func New(name string, opts ...FSUIPCOpt) (*FSUIPC, error) {
 
 	u := &FSUIPC{}
 
-	exePath, err := os.Executable()
+	dllPath, err := getFilePath()
 	if err != nil {
 		return nil, err
 	}
-	dllPath := filepath.Join(filepath.Dir(exePath), "FSUIPC_WAPID.dll")
-	if _, err := os.Stat(dllPath); os.IsNotExist(err) {
-		path, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("cannot get cwd: %w", err)
-		}
-		dllPath = filepath.Join(path, "FSUIPC_WAPID.dll")
-		if _, err := os.Stat(dllPath); os.IsNotExist(err) {
-			return nil, fmt.Errorf("Cannot open file :%w", err)
-		}
-		fmt.Println("got secondary file")
-	}
+	// exePath, err := os.Executable()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// dllPath := filepath.Join(filepath.Dir(exePath), "FSUIPC_WAPID.dll")
+	// if _, err := os.Stat(dllPath); os.IsNotExist(err) {
+	// 	path, err := os.Getwd()
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("cannot get cwd: %w", err)
+	// 	}
+	// 	dllPath = filepath.Join(path, "FSUIPC_WAPID.dll")
+	// 	if _, err := os.Stat(dllPath); os.IsNotExist(err) {
+	// 		return nil, fmt.Errorf("Cannot open file :%w", err)
+	// 	}
+	// 	fmt.Println("got secondary file")
+	// }
 	log.Println("MOD", dllPath)
 	mod := syscall.NewLazyDLL(dllPath)
 	if err = mod.Load(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot lazy load DLL: %w", err)
 	}
 	log.Println("getting symbols")
 	u.proc_executeCalclatorCode = mod.NewProc("fsuipcw_executeCalclatorCode")
